@@ -20,14 +20,16 @@ void sighint(){
 int main(int argc, char *argv[]){   
     signal(SIGHUP, sighup);
     signal(SIGINT, sighint);
-    int n = atoi(argv[1]);
+    int n = atoi(argv[1]);  
 
-    for(int i=0; i<n; i++){
-        if(i % 2 == 0){
-            printf("%d\n", i);
-            sleep(5);
+    
+    int counter = 0;
+    while(counter < n){
+        if(counter % 2 == 0){
+            printf("%d\n", counter);
+            sleep(5); // slow down the execution
         }
+        counter++;
     }
-
     return  0;
 };
