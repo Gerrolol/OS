@@ -110,7 +110,7 @@ int main(int argk, char *argv[], char *envp[]) {
             {
             
             if(bg){
-                printf("[%d] %d\n", job_number++, frkRtnVal);
+                printf("[%d]%d\n", job_number++, frkRtnVal);
                 fflush(stdout); // Ensure immediate output
             }else{
                 wait(0);
