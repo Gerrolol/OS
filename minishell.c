@@ -35,7 +35,7 @@ void sigchld_handler(int sig){
 /* envp - environment pointer */
 int main(int argk, char *argv[], char *envp[]) {
     int frkRtnVal; /* value returned by fork sys call */
-    int wpid; /* value returned by wait */
+    //int wpid; /* value returned by wait */
     char *v[NV]; /* array of pointers to command line tokens
     */
     char *sep = " \t\n"; /* command line token separators */
@@ -94,7 +94,7 @@ int main(int argk, char *argv[], char *envp[]) {
             if(bg){
                 printf("[Background] %s started with PID %d\n", v[0], frkRtnVal);
             }else{
-                wpid = wait(0);
+                wait(0);
                 printf("%s done \n", v[0]);
             }
 
