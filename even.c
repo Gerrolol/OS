@@ -22,7 +22,7 @@ int main(int argc, char *argv[]){
     signal(SIGINT, sighint);
     int n = atoi(argv[1]);
 
-    for(int i=1; i<=n; i++){
+    for(int i=0; i<n; i++){
         if(i % 2 == 0){
             printf("%d\n", i);
             sleep(5);
