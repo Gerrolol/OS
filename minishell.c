@@ -7,85 +7,85 @@
 #include <signal.h>
 #include <errno.h>
 
-#define NV 20  /* max number of command tokens */
+
+#define NV 20 /* max number of command tokens */
 #define NL 100 /* input buffer size */
 char line[NL]; /* command input buffer */
-
-/* shell prompt */
+int job_number = 1;
+/*
+shell prompt
+*/
 void prompt(void) {
     fprintf(stdout, "\n msh> ");
-    fflush(stdout); // ensures immediate prompt
+    fflush(stdout); // allows u to see prompt immediately
 }
 
-/* signal handler for background processes */
-void sigchld_handler(int sig) {
+//signal handler
+void sigchld_handler(int sig){
     int olderrno = errno;
     pid_t pid;
     int status;
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        printf("Background process %d finished\n", pid);
-        fflush(stdout);
+    while((pid = waitpid(-1, &status, WNOHANG)) > 0){
+        printf("\n[Background] PID %d finished\n", pid);
+        fflush(stdout); 
     }
     errno = olderrno;
 }
 
+/* argk - number of arguments */
+/* argv - argument vector from command line */
+/* envp - environment pointer */
 int main(int argk, char *argv[], char *envp[]) {
-    int frkRtnVal; /* fork return value */
-    char *v[NV];   /* array of command line tokens */
-    char *sep = " \t\n"; /* token separators */
-    int i;
-
-    /* setup SIGCHLD handler */
+    int frkRtnVal; /* value returned by fork sys call */
+    //int wpid; /* value returned by wait */
+    char *v[NV]; /* array of pointers to command line tokens
+    */
+    char *sep = " \t\n"; /* command line token separators */
+    int i; /* parse index */
+    
     struct sigaction sa;
     sa.sa_handler = sigchld_handler;
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+    sa.sa_flags = SA_RESTART | SA_NOCLDSTOP; // Restart interrupted sys calls, ignore stopped children
+
     if (sigaction(SIGCHLD, &sa, NULL) == -1) {
         perror("sigaction");
         exit(1);
     }
 
-    /* shell loop */
-    while (1) {
+    /* prompt for and process one command line at a time */
+    while (1) { /* do Forever */
         prompt();
-
-        if (fgets(line, NL, stdin) == NULL) {
-            if (feof(stdin)) {
-                exit(0);
-            } else {
-                perror("fgets");
-                continue;
-            }
+        fgets(line, NL, stdin); //waits for u to type a line and press enter 
+        fflush(stdin);
+        if (feof(stdin)) { /* non-zero on EOF */
+            fprintf(stderr, "EOF pid %d feof %d ferror %d\n", getpid(),
+            feof(stdin), ferror(stdin));
+            exit(0);
         }
-
-        if (line[0] == '#' || line[0] == '\n' || line[0] == '\0')
-            continue;
-
+        if (line[0] == '#' || line[0] == '\n' || line[0] == '\000'){
+            continue; /* to prompt */
+        }
         v[0] = strtok(line, sep);
         for (i = 1; i < NV; i++) {
-            v[i] = strtok(NULL, sep);
-            if (v[i] == NULL) break;
+            v[i] = strtok(NULL, sep); //replaces separators with '\0'
+            if (v[i] == NULL){
+                break;
+            }
         }
-
-        /* detect background & remove it from args */
         int bg = 0;
         for (int j = 0; j < i; j++) {
             if (v[j] && strcmp(v[j], "&") == 0) {
                 bg = 1;
-                v[j] = NULL;
+                v[j] = NULL; // remove "&" so execvp doesn't see it
                 break;
             }
         }
-
-        /* built-in cd */
+/* assert i is number of tokens + 1 */
+/* fork a child process to exec the command in v[0] */
         if (strcmp(v[0], "cd") == 0) {
             if (v[1] == NULL) {
-                char *home = getenv("HOME");
-                if (home == NULL) {
-                    fprintf(stderr, "cd: HOME not set\n");
-                } else if (chdir(home) == -1) {
-                    perror("chdir");
-                }
+                fprintf(stderr, "cd: missing argument\n");
             } else {
                 if (chdir(v[1]) == -1) {
                     perror("chdir");
@@ -94,29 +94,31 @@ int main(int argk, char *argv[], char *envp[]) {
             continue;
         }
 
-        /* fork and exec */
-        frkRtnVal = fork();
-        if (frkRtnVal == -1) {
+        switch (frkRtnVal = fork()) {
+            case -1: /* fork returns error to parent process */
+            {
             perror("fork");
-            continue;
-        }
-
-        if (frkRtnVal == 0) { /* child */
-            execvp(v[0], v);
-            perror("execvp"); /* only reached if exec fails */
-            exit(1);
-        } else { /* parent */
-            if (bg) {
-                printf("Background process %d started\n", frkRtnVal);
-                fflush(stdout);
-            } else {
-                if (waitpid(frkRtnVal, NULL, 0) == -1) {
-                    perror("waitpid");
-                } else {
-                    printf("%s done\n", v[0]);
-                    fflush(stdout);
-                }
+            break;
             }
-        }
-    }
+            case 0: /* code executed only by child process */
+            {
+            execvp(v[0], v);
+            perror("execvp");
+            exit(1); /* exit child process if exec fails */
+            }
+            default: /* code executed only by parent process */
+            {
+            
+            if(bg){
+                printf("[%d] %d\n", job_number++, frkRtnVal);
+                fflush(stdout); // Ensure immediate output
+            }else{
+                wait(0);
+                printf("%s done \n", v[0]);
+            }
+
+            break;
+            }
+        } /* switch */
+    } /* while */
 }
