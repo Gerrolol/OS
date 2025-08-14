@@ -14,7 +14,7 @@ char line[NL]; /* command input buffer */
 /*
 shell prompt
 */
-prompt(void) {
+int prompt(void) {
     fprintf(stdout, "\n msh> ");
     fflush(stdout); // allows u to see prompt immediately
 }
