@@ -78,6 +78,17 @@ int main(int argk, char *argv[], char *envp[]) {
         }
 /* assert i is number of tokens + 1 */
 /* fork a child process to exec the command in v[0] */
+        if (strcmp(v[0], "cd") == 0) {
+            if (v[1] == NULL) {
+                fprintf(stderr, "cd: missing argument\n");
+            } else {
+                if (chdir(v[1]) == -1) {
+                    perror("chdir");
+                }
+            }
+            continue;
+        }
+        
         switch (frkRtnVal = fork()) {
             case -1: /* fork returns error to parent process */
             {
@@ -93,6 +104,7 @@ int main(int argk, char *argv[], char *envp[]) {
             
             if(bg){
                 printf("[Background] %s started with PID %d\n", v[0], frkRtnVal);
+                fflush(stdout); // Ensure immediate output
             }else{
                 wait(0);
                 printf("%s done \n", v[0]);
