@@ -24,9 +24,11 @@ int main(int argc, char *argv[]){
 
     
     int counter = 0;
-    while(counter < n){
+    int i=0;
+    while(i != n){
         if(counter % 2 == 0){
             printf("%d\n", counter);
+            i++;
             sleep(5); // slow down the execution
         }
         counter++;
