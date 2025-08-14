@@ -26,6 +26,7 @@ void sigchld_handler(int sig){
     int status;
     while((pid = waitpid(-1, &status, WNOHANG)) > 0){
         printf("\n[Background] PID %d finished\n", pid);
+        fflush(stdout); 
     }
     errno = olderrno;
 }
@@ -72,9 +73,12 @@ int main(int argk, char *argv[], char *envp[]) {
             }
         }
         int bg = 0;
-        if(strcmp(v[i-1], "&") == 0){
-            bg = 1;
-            v[i-1] = NULL;
+        for (int j = 0; j < i; j++) {
+            if (v[j] && strcmp(v[j], "&") == 0) {
+                bg = 1;
+                v[j] = NULL; // remove "&" so execvp doesn't see it
+                break;
+            }
         }
 /* assert i is number of tokens + 1 */
 /* fork a child process to exec the command in v[0] */
@@ -88,16 +92,18 @@ int main(int argk, char *argv[], char *envp[]) {
             }
             continue;
         }
-        
+
         switch (frkRtnVal = fork()) {
             case -1: /* fork returns error to parent process */
             {
+            perror("fork");
             break;
             }
             case 0: /* code executed only by child process */
             {
             execvp(v[0], v);
             perror("execvp");
+            exit(1); /* exit child process if exec fails */
             }
             default: /* code executed only by parent process */
             {
