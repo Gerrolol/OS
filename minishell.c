@@ -16,7 +16,7 @@ int job_number = 1;
 shell prompt
 */
 void prompt(void) {
-    fprintf(stdout, "\n msh> ");
+    //fprintf(stdout, "\n msh> ");
     fflush(stdout); // allows u to see prompt immediately
 }
 
@@ -109,10 +109,16 @@ int main(int argk, char *argv[], char *envp[]) {
             default: /* code executed only by parent process */
             {
             
-            if(bg){
-                printf("[%d]%d\n", job_number++, frkRtnVal);
-                fflush(stdout); // Ensure immediate output
-            }else{
+            if (bg) {
+                char cmdline[NL] = "";
+                for (int k = 0; v[k] != NULL; k++) {
+                    strcat(cmdline, v[k]);
+                    if (v[k+1] != NULL) strcat(cmdline, " ");
+                }
+                printf("[%d]+ Done\t\t%s\n", job_number++, cmdline);
+                fflush(stdout);
+                }
+            else{
                 wait(0);
                 printf("%s done \n", v[0]);
             }
