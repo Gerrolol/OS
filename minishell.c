@@ -7,124 +7,110 @@
 #include <signal.h>
 #include <errno.h>
 
-
-#define NV 20 /* max number of command tokens */
+#define NV 20  /* max number of command tokens */
 #define NL 100 /* input buffer size */
-char line[NL]; /* command input buffer */
-int job_number = 1;
-/*
-shell prompt
-*/
+
+char line[NL];         /* command input buffer */
+int job_number = 1;    /* current job number */
+
+char last_cmdline[NL]; /* stores last background command */
+int last_job_num = 0;  /* stores last background job number */
+
 void prompt(void) {
-    //fprintf(stdout, "\n msh> ");
-    fflush(stdout); // allows u to see prompt immediately
+    fflush(stdout); // ensures prompt is shown immediately
 }
 
-//signal handler
-void sigchld_handler(int sig){
+void sigchld_handler(int sig) {
     int olderrno = errno;
     pid_t pid;
     int status;
-    while((pid = waitpid(-1, &status, WNOHANG)) > 0){
-        printf("\n[Background] PID %d finished\n", pid);
-        fflush(stdout); 
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        // Print only if it was a background job
+        if (last_job_num > 0) {
+            printf("\n[%d]+  Done\t\t%s\n", last_job_num, last_cmdline);
+            fflush(stdout);
+            last_job_num = 0; // reset
+        }
     }
     errno = olderrno;
 }
 
-/* argk - number of arguments */
-/* argv - argument vector from command line */
-/* envp - environment pointer */
 int main(int argk, char *argv[], char *envp[]) {
-    int frkRtnVal; /* value returned by fork sys call */
-    //int wpid; /* value returned by wait */
-    char *v[NV]; /* array of pointers to command line tokens
-    */
-    char *sep = " \t\n"; /* command line token separators */
-    int i; /* parse index */
-    
+    int frkRtnVal;
+    char *v[NV];
+    char *sep = " \t\n";
+    int i;
+
     struct sigaction sa;
     sa.sa_handler = sigchld_handler;
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART | SA_NOCLDSTOP; // Restart interrupted sys calls, ignore stopped children
+    sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
 
     if (sigaction(SIGCHLD, &sa, NULL) == -1) {
         perror("sigaction");
         exit(1);
     }
 
-    /* prompt for and process one command line at a time */
-    while (1) { /* do Forever */
+    while (1) {
         prompt();
-        fgets(line, NL, stdin); //waits for u to type a line and press enter 
+        if (!fgets(line, NL, stdin))
+            break;
         fflush(stdin);
-        if (feof(stdin)) { /* non-zero on EOF */
+
+        if (feof(stdin)) {
             fprintf(stderr, "EOF pid %d feof %d ferror %d\n", getpid(),
-            feof(stdin), ferror(stdin));
+                    feof(stdin), ferror(stdin));
             exit(0);
         }
-        if (line[0] == '#' || line[0] == '\n' || line[0] == '\000'){
-            continue; /* to prompt */
+        if (line[0] == '#' || line[0] == '\n' || line[0] == '\000') {
+            continue;
         }
+
         v[0] = strtok(line, sep);
         for (i = 1; i < NV; i++) {
-            v[i] = strtok(NULL, sep); //replaces separators with '\0'
-            if (v[i] == NULL){
-                break;
-            }
+            v[i] = strtok(NULL, sep);
+            if (v[i] == NULL) break;
         }
+
         int bg = 0;
         for (int j = 0; j < i; j++) {
             if (v[j] && strcmp(v[j], "&") == 0) {
                 bg = 1;
-                v[j] = NULL; // remove "&" so execvp doesn't see it
+                v[j] = NULL; // remove "&"
                 break;
             }
         }
-/* assert i is number of tokens + 1 */
-/* fork a child process to exec the command in v[0] */
+
         if (strcmp(v[0], "cd") == 0) {
             if (v[1] == NULL) {
                 fprintf(stderr, "cd: missing argument\n");
-            } else {
-                if (chdir(v[1]) == -1) {
-                    perror("chdir");
-                }
+            } else if (chdir(v[1]) == -1) {
+                perror("chdir");
             }
             continue;
         }
 
         switch (frkRtnVal = fork()) {
-            case -1: /* fork returns error to parent process */
-            {
-            perror("fork");
-            break;
-            }
-            case 0: /* code executed only by child process */
-            {
-            execvp(v[0], v);
-            perror("execvp");
-            exit(1); /* exit child process if exec fails */
-            }
-            default: /* code executed only by parent process */
-            {
-            
-            if (bg) {
-                char cmdline[NL] = "";
-                for (int k = 0; v[k] != NULL; k++) {
-                    strcat(cmdline, v[k]);
-                    if (v[k+1] != NULL) strcat(cmdline, " ");
+            case -1:
+                perror("fork");
+                break;
+            case 0: // child
+                execvp(v[0], v);
+                perror("execvp");
+                exit(1);
+            default: // parent
+                if (bg) {
+                    last_job_num = job_number++;
+                    last_cmdline[0] = '\0';
+                    for (int k = 0; v[k] != NULL; k++) {
+                        strcat(last_cmdline, v[k]);
+                        if (v[k+1] != NULL) strcat(last_cmdline, " ");
+                    }
+                } else {
+                    waitpid(frkRtnVal, NULL, 0);
+                    printf("%s done \n", v[0]);
                 }
-                printf("[%d]+ Done\t\t%s\n", job_number++, cmdline);
-                fflush(stdout);
-                }
-            else{
-                wait(0);
-                printf("%s done \n", v[0]);
-            }
-
-            break;
-            }
-        } /* switch */
-    } /* while */
+                break;
+        }
+    }
 }
