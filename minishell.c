@@ -76,7 +76,7 @@ int main(int argk, char *argv[], char *envp[]) {
         for (int j = 0; j < i; j++) {
             if (v[j] && strcmp(v[j], "&") == 0) {
                 bg = 1;
-                v[j] = NULL; // remove "&"
+                v[j] = NULL; // remove &
                 break;
             }
         }
@@ -106,7 +106,8 @@ int main(int argk, char *argv[], char *envp[]) {
                         strcat(last_cmdline, v[k]);
                         if (v[k+1] != NULL) strcat(last_cmdline, " ");
                     }
-                    printf("[%d] %d\n", last_job_num, frkRtnVal);
+                    printf("[%d]%d\n", last_job_num, frkRtnVal);
+                    fflush(stdout);
                 } else {
                     waitpid(frkRtnVal, NULL, 0);
                     printf("%s done \n", v[0]);
