@@ -10,11 +10,11 @@
 #define NV 20  /* max number of command tokens */
 #define NL 100 /* input buffer size */
 
-char line[NL];         /* command input buffer */
-int job_number = 1;    /* current job number */
+char line[NL];       
+int job_number = 1;   
 
-char last_cmdline[NL]; /* stores last background command */
-int last_job_num = 0;  /* stores last background job number */
+char last_cmdline[NL]; 
+int last_job_num = 0;  
 
 void prompt(void) {
     fflush(stdout); // ensures prompt is shown immediately
@@ -58,8 +58,7 @@ int main(int argk, char *argv[], char *envp[]) {
         fflush(stdin);
 
         if (feof(stdin)) {
-            fprintf(stderr, "EOF pid %d feof %d ferror %d\n", getpid(),
-                    feof(stdin), ferror(stdin));
+            //fprintf(stderr, "EOF pid %d feof %d ferror %d\n", getpid(),feof(stdin), ferror(stdin));
             exit(0);
         }
         if (line[0] == '#' || line[0] == '\n' || line[0] == '\000') {
@@ -110,7 +109,7 @@ int main(int argk, char *argv[], char *envp[]) {
                     fflush(stdout);
                 } else {
                     waitpid(frkRtnVal, NULL, 0);
-                    printf("%s done \n", v[0]);
+                    //printf("%s done \n", v[0]);
                 }
                 break;
         }
