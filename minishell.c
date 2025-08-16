@@ -27,7 +27,7 @@ void sigchld_handler(int sig) {
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         // Print only if it was a background job
         if (last_job_num > 0) {
-            printf("\n[%d]+  Done\t\t%s\n", last_job_num, last_cmdline);
+            printf("\n[%d]+ Done %s\n", last_job_num, last_cmdline);
             fflush(stdout);
             last_job_num = 0; // reset
         }
