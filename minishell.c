@@ -82,7 +82,7 @@ int main(int argk, char *argv[], char *envp[]) {
 
         if (strcmp(v[0], "cd") == 0) {
             if (v[1] == NULL) {
-                fprintf(stderr, "cd: missing argument\n");
+                //fprintf(stderr, "cd: missing argument\n");
             } else if (chdir(v[1]) == -1) {
                 perror("chdir");
             }
