@@ -105,8 +105,8 @@ int main(int argk, char *argv[], char *envp[]) {
                         strcat(last_cmdline, v[k]);
                         if (v[k+1] != NULL) strcat(last_cmdline, " ");
                     }
-                    printf("[%d]%d\n", last_job_num, frkRtnVal);
-                    fflush(stdout);
+                    //printf("[%d]%d\n", last_job_num, frkRtnVal);
+                    //fflush(stdout);
                 } else {
                     waitpid(frkRtnVal, NULL, 0);
                     //printf("%s done \n", v[0]);
