@@ -9,15 +9,31 @@
 
 #define NV 20  /* max number of command tokens */
 #define NL 100 /* input buffer size */
+#define MAXJOBS 32
 
-char line[NL];       
-int job_number = 1;   
+struct job {
+    int job_num;          /* job number */
+    pid_t pid;            /* process ID */
+    char cmdline[NL];     /* command line */
+};
 
-char last_cmdline[NL]; 
-int last_job_num = 0;  
+char line[NL];
+struct job jobs[MAXJOBS];
+int job_number = 1;
 
 void prompt(void) {
     fflush(stdout); // ensures prompt is shown immediately
+}
+
+void remove_job(pid_t pid) {
+    for (int i = 0; i < MAXJOBS; i++) {
+        if (jobs[i].pid == pid) {
+            jobs[i].pid = 0;
+            jobs[i].job_num = 0;
+            jobs[i].cmdline[0] = '\0';
+            break;
+        }
+    }
 }
 
 void sigchld_handler(int sig) {
@@ -25,14 +41,29 @@ void sigchld_handler(int sig) {
     pid_t pid;
     int status;
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        // Print only if it was a background job
-        if (last_job_num > 0) {
-            printf("\n[%d]+ Done %s\n", last_job_num, last_cmdline);
-            fflush(stdout);
-            last_job_num = 0; // reset
+        for (int i = 0; i < MAXJOBS; i++) {
+            if (jobs[i].pid == pid) {
+                printf("\n[%d]+ Done %s\n", jobs[i].job_num, jobs[i].cmdline);
+                fflush(stdout);
+                remove_job(pid);
+                break;
+            }
         }
     }
     errno = olderrno;
+}
+
+int add_job(pid_t pid, const char *cmdline) {
+    for (int i = 0; i < MAXJOBS; i++) {
+        if (jobs[i].pid == 0) {
+            jobs[i].pid = pid;
+            jobs[i].job_num = job_number++;
+            strncpy(jobs[i].cmdline, cmdline, NL-1);
+            jobs[i].cmdline[NL-1] = '\0';
+            return jobs[i].job_num;
+        }
+    }
+    return -1; // No space
 }
 
 int main(int argk, char *argv[], char *envp[]) {
@@ -51,6 +82,8 @@ int main(int argk, char *argv[], char *envp[]) {
         exit(1);
     }
 
+    memset(jobs, 0, sizeof(jobs));
+
     while (1) {
         prompt();
         if (!fgets(line, NL, stdin))
@@ -58,7 +91,6 @@ int main(int argk, char *argv[], char *envp[]) {
         fflush(stdin);
 
         if (feof(stdin)) {
-            //fprintf(stderr, "EOF pid %d feof %d ferror %d\n", getpid(),feof(stdin), ferror(stdin));
             exit(0);
         }
         if (line[0] == '#' || line[0] == '\n' || line[0] == '\000') {
@@ -99,14 +131,18 @@ int main(int argk, char *argv[], char *envp[]) {
                 exit(1);
             default: // parent
                 if (bg) {
-                    last_job_num = job_number++;
-                    last_cmdline[0] = '\0';
+                    char cmdline[NL] = "";
                     for (int k = 0; v[k] != NULL; k++) {
-                        strcat(last_cmdline, v[k]);
-                        if (v[k+1] != NULL) strcat(last_cmdline, " ");
+                        strcat(cmdline, v[k]);
+                        if (v[k+1] != NULL) strcat(cmdline, " ");
                     }
-                    //printf("[%d]%d\n", last_job_num, frkRtnVal);
-                    //fflush(stdout);
+                    int jobnum = add_job(frkRtnVal, cmdline);
+                    if (jobnum > 0) {
+                        printf("[%d]%d\n", jobnum, frkRtnVal);
+                        fflush(stdout);
+                    } else {
+                        //printf("Job list full!\n");
+                    }
                 } else {
                     waitpid(frkRtnVal, NULL, 0);
                     //printf("%s done \n", v[0]);
