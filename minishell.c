@@ -46,7 +46,6 @@ void sigchld_handler(int sig) {
                 printf("[%d]+ Done%20s%s\n", jobs[i].job_num, "", jobs[i].cmdline);
                 fflush(stdout);
                 remove_job(pid);
-                break;
             }
         }
     }
