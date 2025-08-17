@@ -21,9 +21,9 @@ char line[NL];
 struct job jobs[MAXJOBS];
 int job_number = 1;
 
-void prompt(void) {
-    fflush(stdout); // ensures prompt is shown immediately
-}
+// void prompt(void) {
+//     //fflush(stdout); // ensures prompt is shown immediately
+// }
 
 void remove_job(pid_t pid) {
     for (int i = 0; i < MAXJOBS; i++) {
@@ -85,7 +85,7 @@ int main(int argk, char *argv[], char *envp[]) {
     memset(jobs, 0, sizeof(jobs));
 
     while (1) {
-        prompt();
+        //prompt();
         if (!fgets(line, NL, stdin))
             break;
         fflush(stdin);
@@ -138,7 +138,7 @@ int main(int argk, char *argv[], char *envp[]) {
                     }
                     int jobnum = add_job(frkRtnVal, cmdline);
                     if (jobnum > 0) {
-                        printf("[%d]%d\n", jobnum, frkRtnVal);
+                        printf("[%d] %d\n", jobnum, frkRtnVal);
                         fflush(stdout);
                     } else {
                         //printf("Job list full!\n");
