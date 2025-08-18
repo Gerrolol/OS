@@ -17,14 +17,16 @@ struct job {
     char cmdline[NL];     /* command line */
 };
 
+//globals
 char line[NL];
-struct job jobs[MAXJOBS];
+struct job jobs[MAXJOBS]; //keep track of all background jobs
 int job_number = 1;
 
 // void prompt(void) {
 //     //fflush(stdout); // ensures prompt is shown immediately
 // }
 
+// Remove a job from the jobs array by its PID  
 void remove_job(pid_t pid) {
     for (int i = 0; i < MAXJOBS; i++) {
         if (jobs[i].pid == pid) {
@@ -36,6 +38,7 @@ void remove_job(pid_t pid) {
     }
 }
 
+// Signal handler for SIGCHLD to handle child process termination
 void sigchld_handler(int sig) {
     int olderrno = errno;
     pid_t pid;
@@ -43,7 +46,7 @@ void sigchld_handler(int sig) {
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         for (int i = 0; i < MAXJOBS; i++) {
             if (jobs[i].pid == pid) {
-                printf("[%d]+ Done %s\n", jobs[i].job_num, jobs[i].cmdline);
+                printf("[%d]+ Done %*d\n", jobs[i].job_num, 25, jobs[i].pid);
                 fflush(stdout);
                 remove_job(pid);
             }
@@ -51,7 +54,9 @@ void sigchld_handler(int sig) {
     }
     errno = olderrno;
 }
-
+// Add a job to the jobs array
+// Returns the job number if successful, or -1 if no spac   e is available
+// The job number is incremented each time a new job is added
 int add_job(pid_t pid, const char *cmdline) {
     for (int i = 0; i < MAXJOBS; i++) {
         if (jobs[i].pid == 0) {
@@ -71,6 +76,7 @@ int main(int argk, char *argv[], char *envp[]) {
     char *sep = " \t\n";
     int i;
 
+    // signal handler setup which runs whenever a child finishes.
     struct sigaction sa;
     sa.sa_handler = sigchld_handler;
     sigemptyset(&sa.sa_mask);
@@ -80,11 +86,11 @@ int main(int argk, char *argv[], char *envp[]) {
         perror("sigaction");
         exit(1);
     }
-
+    //clears the job[] array 
     memset(jobs, 0, sizeof(jobs));
 
     while (1) {
-        //prompt();
+        //prompt()
         if (!fgets(line, NL, stdin))
             break;
         fflush(stdin);
@@ -101,7 +107,7 @@ int main(int argk, char *argv[], char *envp[]) {
             v[i] = strtok(NULL, sep);
             if (v[i] == NULL) break;
         }
-
+        //looks for & and if found marks job as background job and removes & from the token list
         int bg = 0;
         for (int j = 0; j < i; j++) {
             if (v[j] && strcmp(v[j], "&") == 0) {
@@ -130,7 +136,8 @@ int main(int argk, char *argv[], char *envp[]) {
                 exit(1);
             default: // parent
                 if (bg) {
-                    char cmdline[NL] = "";
+                    //if the job is a background job, add it to the jobs array
+                    char cmdline[NL] = ""; //build the comand string for job table
                     for (int k = 0; v[k] != NULL; k++) {
                         strcat(cmdline, v[k]);
                         if (v[k+1] != NULL) strcat(cmdline, " ");
@@ -139,9 +146,7 @@ int main(int argk, char *argv[], char *envp[]) {
                     if (jobnum > 0) {
                         printf("[%d] %d\n", jobnum, frkRtnVal);
                         fflush(stdout);
-                    } else {
-                        //printf("J");
-                    }
+                    } 
                 } else {
                     waitpid(frkRtnVal, NULL, 0);
                 }
