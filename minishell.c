@@ -9,7 +9,7 @@
 
 #define NV 20  /* max number of command tokens */
 #define NL 100 /* input buffer size */
-#define MAXJOBS 32
+#define MAXJOBS 100
 
 struct job {
     int job_num;          /* job number */
@@ -43,7 +43,7 @@ void sigchld_handler(int sig) {
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         for (int i = 0; i < MAXJOBS; i++) {
             if (jobs[i].pid == pid) {
-                printf("[%d]+ Done%20s%s\n", jobs[i].job_num, "", jobs[i].cmdline);
+                printf("[%d]+ Done%20s%d\n", jobs[i].job_num, "", jobs[i].pid);
                 fflush(stdout);
                 remove_job(pid);
             }
