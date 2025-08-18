@@ -46,7 +46,7 @@ void sigchld_handler(int sig) {
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         for (int i = 0; i < MAXJOBS; i++) {
             if (jobs[i].pid == pid) {
-                printf("[%d]+ Done %*d\n", jobs[i].job_num, 25, jobs[i].pid);
+                printf("[%d]+ Done %d %s\n", jobs[i].job_num,jobs[i].pid,jobs[i].cmdline);
                 fflush(stdout);
                 remove_job(pid);
             }
@@ -83,7 +83,7 @@ int main(int argk, char *argv[], char *envp[]) {
     sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
 
     if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-        perror("sigaction");
+        //perror("sigaction");
         exit(1);
     }
     //clears the job[] array 
@@ -121,18 +121,18 @@ int main(int argk, char *argv[], char *envp[]) {
             if (v[1] == NULL) {
                 //fprintf(stderr, "cd: missing argument\n");
             } else if (chdir(v[1]) == -1) {
-                perror("chdir");
+                //perror("chdir");
             }
             continue;
         }
 
         switch (frkRtnVal = fork()) {
             case -1:
-                perror("fork");
+                //perror("fork");
                 break;
             case 0: // child
                 execvp(v[0], v);
-                perror("execvp");
+                //perror("execvp");
                 exit(1);
             default: // parent
                 if (bg) {
