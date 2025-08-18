@@ -43,9 +43,11 @@ void sigchld_handler(int sig) {
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         for (int i = 0; i < MAXJOBS; i++) {
             if (jobs[i].pid == pid) {
+                // Print finish message in bash format
                 printf("[%d]+ Done %s\n", jobs[i].job_num, jobs[i].cmdline);
                 fflush(stdout);
                 remove_job(pid);
+                break;
             }
         }
     }
@@ -130,23 +132,34 @@ int main(int argk, char *argv[], char *envp[]) {
                 exit(1);
             default: // parent
                 if (bg) {
-                    char cmdline[NL] = "";
-                    for (int k = 0; v[k] != NULL; k++) {
-                        strcat(cmdline, v[k]);
-                        if (v[k+1] != NULL) strcat(cmdline, " ");
+                    // Copy the original input line
+                    char rawline[NL];
+                    strncpy(rawline, line, NL-1);
+                    rawline[NL-1] = '\0';
+
+                    // Remove trailing newline
+                    size_t len = strlen(rawline);
+                    if (len > 0 && rawline[len-1] == '\n') rawline[len-1] = '\0';
+
+                    // Remove trailing '&' and spaces
+                    char *amp = strrchr(rawline, '&');
+                    if (amp) {
+                        *amp = '\0';
+                        // trim spaces before '&'
+                        while (amp > rawline && (*(amp-1) == ' ' || *(amp-1) == '\t')) {
+                            *(--amp) = '\0';
+                        }
                     }
-                    int jobnum = add_job(frkRtnVal, cmdline);
+
+                    // Add the job to the job list
+                    int jobnum = add_job(frkRtnVal, rawline);
                     if (jobnum > 0) {
                         printf("[%d] %d\n", jobnum, frkRtnVal);
                         fflush(stdout);
                     } else {
                         //printf("Job list full!\n");
                     }
-                } else {
-                    waitpid(frkRtnVal, NULL, 0);
-                    //printf("%s done \n", v[0]);
                 }
-                break;
         }
     }
 }
