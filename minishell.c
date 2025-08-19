@@ -47,7 +47,7 @@ void sigchld_handler(int sig) {
         for (int i = 0; i < MAXJOBS; i++) {
             if (jobs[i].pid == pid) {
                 // Format like Bash
-                printf("[%d]+ Done                 %s\n",
+                printf("[%d]+ Done                 %s",
                        jobs[i].job_num, jobs[i].cmdline);
                 fflush(stdout);
                 remove_job(pid);
