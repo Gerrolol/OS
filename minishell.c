@@ -46,7 +46,9 @@ void sigchld_handler(int sig) {
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         for (int i = 0; i < MAXJOBS; i++) {
             if (jobs[i].pid == pid) {
-                printf("[%d]+ Done\t\t\t %s\n", jobs[i].job_num, jobs[i].cmdline);
+                // Format like Bash
+                printf("[%d]+ Done                 %s\n",
+                       jobs[i].job_num, jobs[i].cmdline);
                 fflush(stdout);
                 remove_job(pid);
             }
@@ -54,6 +56,7 @@ void sigchld_handler(int sig) {
     }
     errno = olderrno;
 }
+
 
 // void sigchld_handler(int sig) {
 //     int olderrno = errno;
@@ -175,6 +178,4 @@ int main(int argk, char *argv[], char *envp[]) {
             pause();  // sleep until a signal (like SIGCHLD) wakes us
         }
     } while (alive);
-
-    return 0;
 }
