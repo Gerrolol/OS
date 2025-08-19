@@ -54,6 +54,18 @@ void sigchld_handler(int sig) {
     }
     errno = olderrno;
 }
+
+// void sigchld_handler(int sig) {
+//     int olderrno = errno;
+//     pid_t pid;
+//     int status;
+//     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+//         printf("SIGCHLD fired for pid %d\n", pid);
+//         fflush(stdout);
+//     }
+//     errno = olderrno;
+// }
+
 // Add a job to the jobs array
 // Returns the job number if successful, or -1 if no spac   e is available
 // The job number is incremented each time a new job is added
@@ -76,7 +88,7 @@ int main(int argk, char *argv[], char *envp[]) {
     char *sep = " \t\n";
     int i;
 
-    // signal handler setup which runs whenever a child finishes.
+    // signal handler setup
     struct sigaction sa;
     sa.sa_handler = sigchld_handler;
     sigemptyset(&sa.sa_mask);
@@ -86,17 +98,15 @@ int main(int argk, char *argv[], char *envp[]) {
         perror("sigaction");
         exit(1);
     }
-    //clears the job[] array 
-   memset(jobs, 0, sizeof(jobs));
+
+    memset(jobs, 0, sizeof(jobs));
 
     while (1) {
-        //prompt()
-        if (!fgets(line, NL, stdin))
-            break;
-        fflush(stdin);
-
+        if (!fgets(line, NL, stdin)) {
+            break;   // EOF on stdin
+        }
         if (feof(stdin)) {
-            exit(0);
+            break;
         }
         if (line[0] == '#' || line[0] == '\n' || line[0] == '\000') {
             continue;
@@ -107,20 +117,18 @@ int main(int argk, char *argv[], char *envp[]) {
             v[i] = strtok(NULL, sep);
             if (v[i] == NULL) break;
         }
-        //looks for & and if found marks job as background job and removes & from the token list
+
         int bg = 0;
         for (int j = 0; j < i; j++) {
             if (v[j] && strcmp(v[j], "&") == 0) {
                 bg = 1;
-                v[j] = NULL; // remove &
+                v[j] = NULL;
                 break;
             }
         }
 
         if (strcmp(v[0], "cd") == 0) {
-            if (v[1] == NULL) {
-                //fprintf(stderr, "cd: missing argument\n");
-            } else if (chdir(v[1]) == -1) {
+            if (v[1] != NULL && chdir(v[1]) == -1) {
                 perror("chdir");
             }
             continue;
@@ -136,8 +144,7 @@ int main(int argk, char *argv[], char *envp[]) {
                 exit(1);
             default: // parent
                 if (bg) {
-                    //if the job is a background job, add it to the jobs array
-                    char cmdline[NL] = ""; //build the comand string for job table
+                    char cmdline[NL] = "";
                     for (int k = 0; v[k] != NULL; k++) {
                         strcat(cmdline, v[k]);
                         if (v[k+1] != NULL) strcat(cmdline, " ");
@@ -146,11 +153,28 @@ int main(int argk, char *argv[], char *envp[]) {
                     if (jobnum > 0) {
                         printf("[%d] %d\n", jobnum, frkRtnVal);
                         fflush(stdout);
-                    } 
+                    }
                 } else {
                     waitpid(frkRtnVal, NULL, 0);
                 }
                 break;
         }
     }
+
+    // *** NEW PART: after EOF, wait until all background jobs finish ***
+    int alive;
+    do {
+        alive = 0;
+        for (int i = 0; i < MAXJOBS; i++) {
+            if (jobs[i].pid != 0) {
+                alive = 1;
+                break;
+            }
+        }
+        if (alive) {
+            pause();  // sleep until a signal (like SIGCHLD) wakes us
+        }
+    } while (alive);
+
+    return 0;
 }
