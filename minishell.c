@@ -40,7 +40,6 @@ void remove_job(pid_t pid) {
 
 // Signal handler for SIGCHLD to handle child process termination
 void sigchld_handler(int sig) {
-    int olderrno = errno;
     pid_t pid;
     int status;
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
@@ -53,20 +52,8 @@ void sigchld_handler(int sig) {
             }
         }
     }
-    errno = olderrno;
 }
 
-
-// void sigchld_handler(int sig) {
-//     int olderrno = errno;
-//     pid_t pid;
-//     int status;
-//     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-//         printf("SIGCHLD fired for pid %d\n", pid);
-//         fflush(stdout);
-//     }
-//     errno = olderrno;
-// }
 
 // Add a job to the jobs array
 // Returns the job number if successful, or -1 if no spac   e is available
@@ -95,6 +82,7 @@ int main(int argk, char *argv[], char *envp[]) {
 
 
     while (1) {
+        prompt();
         if (!fgets(line, NL, stdin)) {
             break;   // EOF on stdin
         }
@@ -141,7 +129,6 @@ int main(int argk, char *argv[], char *envp[]) {
             default: // parent
                 if (bg) {
                     commandLine[strcspn(commandLine, "&")] = '\0';  // remove &
-        
                     int jobnum = add_job(frkRtnVal, commandLine);
                     if (jobnum > 0) {
                         printf("[%d] %d\n", jobnum, frkRtnVal);
