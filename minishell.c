@@ -19,8 +19,8 @@ struct job {
 
 //globals
 char line[NL];
-struct job jobs[MAXJOBS]; //keep track of all background jobs
-int job_number = 1;
+static struct job jobs[MAXJOBS]; //keep track of all background jobs
+static int job_number = 1;
 
 void prompt(void) {
     fflush(stdout); // ensures prompt is shown immediately
@@ -83,9 +83,8 @@ int main(int argk, char *argv[], char *envp[]) {
 
     while (1) {
         prompt();
-        if (!fgets(line, NL, stdin)) {
-            break;   // EOF on stdin
-        }
+        fgets(line, NL, stdin);
+      
         if (feof(stdin)) {
             exit(0);
         }
@@ -135,7 +134,9 @@ int main(int argk, char *argv[], char *envp[]) {
                         fflush(stdout);
                     }
                 } else {
-                    waitpid(frkRtnVal, NULL, 0);
+                    if(wait(NULL) == -1) {
+                        perror("wait");
+                    }
                 }
                 break;
         }
