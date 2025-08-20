@@ -22,9 +22,9 @@ char line[NL];
 struct job jobs[MAXJOBS]; //keep track of all background jobs
 int job_number = 1;
 
-// void prompt(void) {
-//     //fflush(stdout); // ensures prompt is shown immediately
-// }
+void prompt(void) {
+    fflush(stdout); // ensures prompt is shown immediately
+}
 
 // Remove a job from the jobs array by its PID  
 void remove_job(pid_t pid) {
@@ -47,8 +47,7 @@ void sigchld_handler(int sig) {
         for (int i = 0; i < MAXJOBS; i++) {
             if (jobs[i].pid == pid) {
                 // Format like Bash
-                printf("[%d]+ Done                 %s",
-                       jobs[i].job_num, jobs[i].cmdline);
+                printf("[%d]+ Done                 %s\n",jobs[i].job_num, jobs[i].cmdline);
                 fflush(stdout);
                 remove_job(pid);
             }
@@ -92,29 +91,22 @@ int main(int argk, char *argv[], char *envp[]) {
     int i;
 
     // signal handler setup
-    struct sigaction sa;
-    sa.sa_handler = sigchld_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+    signal(SIGCHLD, sigchld_handler);
 
-    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-
-    memset(jobs, 0, sizeof(jobs));
 
     while (1) {
         if (!fgets(line, NL, stdin)) {
             break;   // EOF on stdin
         }
         if (feof(stdin)) {
-            break;
+            exit(0);
         }
         if (line[0] == '#' || line[0] == '\n' || line[0] == '\000') {
             continue;
         }
-
+        
+        char commandLine[NL];
+        strncpy(commandLine, line, NL-1);
         v[0] = strtok(line, sep);
         for (i = 1; i < NV; i++) {
             v[i] = strtok(NULL, sep);
@@ -142,17 +134,15 @@ int main(int argk, char *argv[], char *envp[]) {
                 perror("fork");
                 break;
             case 0: // child
-                execvp(v[0], v);
-                perror("execvp");
-                exit(1);
+                if(execvp(v[0], v) == -1){
+                    perror("execvp");
+                    exit(EXIT_FAILURE);
+                }
             default: // parent
                 if (bg) {
-                    char cmdline[NL] = "";
-                    for (int k = 0; v[k] != NULL; k++) {
-                        strcat(cmdline, v[k]);
-                        if (v[k+1] != NULL) strcat(cmdline, " ");
-                    }
-                    int jobnum = add_job(frkRtnVal, cmdline);
+                    commandLine[strcspn(commandLine, "&")] = '\0';  // remove &
+        
+                    int jobnum = add_job(frkRtnVal, commandLine);
                     if (jobnum > 0) {
                         printf("[%d] %d\n", jobnum, frkRtnVal);
                         fflush(stdout);
@@ -164,18 +154,18 @@ int main(int argk, char *argv[], char *envp[]) {
         }
     }
 
-    // *** NEW PART: after EOF, wait until all background jobs finish ***
-    int alive;
-    do {
-        alive = 0;
-        for (int i = 0; i < MAXJOBS; i++) {
-            if (jobs[i].pid != 0) {
-                alive = 1;
-                break;
-            }
-        }
-        if (alive) {
-            pause();  // sleep until a signal (like SIGCHLD) wakes us
-        }
-    } while (alive);
+    //after EOF, wait until all background jobs finish ***
+    // int alive;
+    // do {
+    //     alive = 0;
+    //     for (int i = 0; i < MAXJOBS; i++) {
+    //         if (jobs[i].pid != 0) {
+    //             alive = 1;
+    //             break;
+    //         }
+    //     }
+    //     if (alive) {
+    //         pause();  // sleep until a signal (like SIGCHLD) wakes us
+    //     }
+    // } while (alive);
 }
