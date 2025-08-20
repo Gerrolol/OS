@@ -45,9 +45,7 @@ void sigchld_handler(int sig) {
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         for (int i = 0; i < MAXJOBS; i++) {
             if (jobs[i].pid == pid) {
-                // Format like Bash
                 printf("[%d]+ Done                 %s\n",jobs[i].job_num, jobs[i].cmdline);
-                fflush(stdout);
                 remove_job(pid);
             }
         }
@@ -63,8 +61,8 @@ int add_job(pid_t pid, const char *cmdline) {
         if (jobs[i].pid == 0) {
             jobs[i].pid = pid;
             jobs[i].job_num = job_number++;
-            strncpy(jobs[i].cmdline, cmdline, NL-1);
-            jobs[i].cmdline[NL-1] = '\0';
+            strcpy(jobs[i].cmdline, cmdline);
+            //jobs[i].cmdline[NL-1] = '\0';
             return jobs[i].job_num;
         }
     }
