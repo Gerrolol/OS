@@ -82,21 +82,22 @@ int main(int argk, char *argv[], char *envp[]) {
 
     while (1) {
         prompt();
-        fgets(line, NL, stdin);
-      
-        if (feof(stdin)) {
-            // Wait for all background jobs to finish
-            while (1) {
-                int active = 0;
+        if (!fgets(line, NL, stdin)) {
+            // EOF: wait for all background jobs to complete before exiting
+            int any_jobs_running;
+            do {
+                any_jobs_running = 0;
                 for (int i = 0; i < MAXJOBS; i++) {
                     if (jobs[i].pid != 0) {
-                        active = 1;
+                        any_jobs_running = 1;
                         break;
                     }
                 }
-                if (!active) break; // No active jobs
-                pause(); // Wait for SIGCHLD to wake us when a child finishes
-            }
+                if (any_jobs_running) {
+                    // Sleep briefly to avoid busy waiting
+                    usleep(100000); // 100ms
+                }
+            } while (any_jobs_running);
             exit(0);
         }
         if (line[0] == '#' || line[0] == '\n' || line[0] == '\000') {
