@@ -46,6 +46,7 @@ void sigchld_handler(int sig) {
         for (int i = 0; i < MAXJOBS; i++) {
             if (jobs[i].pid == pid) {
                 printf("[%d]+ Done                 %s\n",jobs[i].job_num, jobs[i].cmdline);
+                fflush(stdout);
                 remove_job(pid);
             }
         }
@@ -84,6 +85,18 @@ int main(int argk, char *argv[], char *envp[]) {
         fgets(line, NL, stdin);
       
         if (feof(stdin)) {
+            // Wait for all background jobs to finish
+            while (1) {
+                int active = 0;
+                for (int i = 0; i < MAXJOBS; i++) {
+                    if (jobs[i].pid != 0) {
+                        active = 1;
+                        break;
+                    }
+                }
+                if (!active) break; // No active jobs
+                pause(); // Wait for SIGCHLD to wake us when a child finishes
+            }
             exit(0);
         }
         if (line[0] == '#' || line[0] == '\n' || line[0] == '\000') {
@@ -139,19 +152,4 @@ int main(int argk, char *argv[], char *envp[]) {
                 break;
         }
     }
-
-    //after EOF, wait until all background jobs finish ***
-    // int alive;
-    // do {
-    //     alive = 0;
-    //     for (int i = 0; i < MAXJOBS; i++) {
-    //         if (jobs[i].pid != 0) {
-    //             alive = 1;
-    //             break;
-    //         }
-    //     }
-    //     if (alive) {
-    //         pause();  // sleep until a signal (like SIGCHLD) wakes us
-    //     }
-    // } while (alive);
 }
