@@ -86,6 +86,18 @@ int main(int argk, char *argv[], char *envp[]) {
         fgets(line, NL, stdin);
       
         if (feof(stdin)) {
+             // Wait for all background jobs before exiting
+            while (1) {
+                int active_jobs = 0;
+                for (int i = 0; i < MAXJOBS; i++) {
+                    if (jobs[i].pid != 0) {
+                        active_jobs = 1;
+                        break;
+                    }
+                }
+                if (!active_jobs) break; // No jobs left, safe to exit
+                pause(); // Wait for a signal (SIGCHLD will wake us)
+            }
             exit(0);
         }
         if (line[0] == '#' || line[0] == '\n' || line[0] == '\000') {
